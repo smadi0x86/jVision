@@ -9,3 +9,5 @@ hosts_simple.txt
 secondscan.txt
 temp1.xml
 temp2.xml
+
+__pycache__
