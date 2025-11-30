@@ -35,7 +35,7 @@ pip install --user requests beautifulsoup4 lxml pwntools
 python3 jvisionclient.py -i <server-ip> -p 7777 -s <target-subnet>
 ```
 
-> Need more control? POST your own JSON to `http://<server>:7777/box` matching the `BoxDTO` shape (IP, hostname, standing, services[]).
+> Need more control? POST your own JSON to `http://<server>:7777/box` matching the `BoxDTO` shape (IP, hostname, standing, services[], domainAssets[]).
 
 ## User Guide
 
