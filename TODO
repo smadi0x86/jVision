@@ -6,5 +6,6 @@
 
 ## Client
 
-- [ ] Build a shared uploader core that handles config, batching, and POSTs to `/box`.
+- [x] Build a shared uploader core that handles config, batching, and POSTs to `/box`.
 - [ ] Implement plugins for Nmap, Masscan, Powerview/fscan, etc... each responsible for parsing tool output (OS details, NSE/vuln notes, traceroute, AD data) into the common DTOs.
+- [ ] Add multiple phase discovery, scanning and enumeration to the uploader logic.
