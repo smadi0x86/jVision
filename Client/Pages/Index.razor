@@ -184,6 +184,20 @@ else
                         <Column TableItem="ServiceDTO" Title="Script" Field="@(x => x.Script)" Sortable="true" Filterable="true" Width="10%" Format="C" Align="Align.Right" />
                         <Pager ShowPageNumber="true" ShowTotalCount="true" />
                     </Table>
+
+                    @if (box.DomainAssets != null && box.DomainAssets.Any())
+                    {
+                        <h4 style="margin-top:25px;"><b>Domain Assets</b></h4>
+                        <Table TableItem="DomainAssetDTO" Items="box.DomainAssets" PageSize="10" ColumnReorder="true">
+                            <Column TableItem="DomainAssetDTO" Title="Hostname" Field="@(x => x.Hostname)" Sortable="true" Filterable="true" />
+                            <Column TableItem="DomainAssetDTO" Title="Domain" Field="@(x => x.DomainName)" Sortable="true" Filterable="true" />
+                            <Column TableItem="DomainAssetDTO" Title="Role" Field="@(x => x.Role)" Sortable="true" Filterable="true" />
+                            <Column TableItem="DomainAssetDTO" Title="Is DC" Field="@(x => x.IsDomainController)" Sortable="true" Filterable="true" />
+                            <Column TableItem="DomainAssetDTO" Title="IP" Field="@(x => x.Ip)" Sortable="true" Filterable="true" />
+                            <Column TableItem="DomainAssetDTO" Title="Notes" Field="@(x => x.Notes)" />
+                            <Pager ShowPageNumber="true" ShowTotalCount="true" />
+                        </Table>
+                    }
                     <h4><b>Comments: </b></h4>
                     @box.Comments
                 </div>

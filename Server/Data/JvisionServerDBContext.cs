@@ -22,6 +22,8 @@ namespace jVision.Server.Data
 
         public DbSet<AquaUpload> AquaUpload { get; set; }
 
+        public DbSet<DomainAsset> DomainAssets { get; set; }
+
         //public DbSet<Cred> Cred { get; set; }
 
 

@@ -33,9 +33,8 @@ namespace jVision.Server.Controllers
         public async Task<ActionResult<IEnumerable<BoxDTO>>> GetBox()
         {
             return await _context.Boxes
-                //maybe convert service to dto?
-                //fix this whole thing
                 .Include(c => c.Services)
+                .Include(c => c.DomainAssets)
                 .Select(box => new BoxDTO
                 {
                     BoxId = box.BoxId,
@@ -48,7 +47,8 @@ namespace jVision.Server.Controllers
                     Standing = box.Standing,
                     Os = box.Os,
                     Subnet = box.Subnet,
-                    Services = box.Services.Where(s => s!= null).Select(x => ServiceToDTO(x)).ToList()
+                    Services = box.Services.Where(s => s!= null).Select(x => ServiceToDTO(x)).ToList(),
+                    DomainAssets = box.DomainAssets == null ? null : box.DomainAssets.Select(x => DomainAssetToDTO(x)).ToList()
                     //(ICollection<ServiceDTO>)box.Services
                 }).ToListAsync();
         }
@@ -198,6 +198,20 @@ namespace jVision.Server.Controllers
                 Name = s.Name,
                 Version = s.Version,
                 Script = s.Script
+            };
+
+        private static DomainAssetDTO DomainAssetToDTO(DomainAsset d) =>
+            new DomainAssetDTO
+            {
+                DomainAssetId = d.DomainAssetId,
+                BoxId = d.BoxId,
+                Hostname = d.Hostname,
+                DomainName = d.DomainName,
+                DistinguishedName = d.DistinguishedName,
+                Role = d.Role,
+                Ip = d.Ip,
+                IsDomainController = d.IsDomainController,
+                Notes = d.Notes
             };
 
     }

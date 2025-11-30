@@ -2,13 +2,9 @@
 
 ## Server
 
-- Model and ingest domain data (DomainAsset table + Powerview/fscan ingestion) linked to Boxes so AD hosts are highlighted instantly.
-- Persist scan metadata (source tool, timestamps, OS confidence, traceroute, vuln notes) on Box/Service entities for audit-ready timelines.
-- Add secure evidence uploads per box (screenshots/logs) with API + storage to accelerate report writing.
-- Introduce Identity roles (Operator/Lead/Observer) and audit logging on all edits to meet CPTC professionalism expectations.
+- [x] Model and ingest domain data (DomainAsset table (EF Core) + Powerview/fscan ingestion) linked to Boxes so AD hosts are highlighted instantly.
 
 ## Client
 
-- Build a shared uploader core that handles config, batching, and POSTs to `/box`.
-- Implement plugins for Nmap, Masscan, Powerview/fscan, etc... each responsible for parsing tool output (OS details, NSE/vuln notes, traceroute, AD data) into the common DTOs.
-- Seed OS metadata and Active Directory signals (SMB/LDAP detections) during parsing so the server receives rich context without separate scripts.
+- [ ] Build a shared uploader core that handles config, batching, and POSTs to `/box`.
+- [ ] Implement plugins for Nmap, Masscan, Powerview/fscan, etc... each responsible for parsing tool output (OS details, NSE/vuln notes, traceroute, AD data) into the common DTOs.

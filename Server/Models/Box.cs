@@ -24,6 +24,8 @@ namespace jVision.Server.Models
         public string Subnet { get; set; }
 
         public IList<Service> Services { get; set; }
+
+        public IList<DomainAsset> DomainAssets { get; set; }
         
     }
 }

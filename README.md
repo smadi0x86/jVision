@@ -12,6 +12,15 @@ docker compose up -d
 
 ### Build
 
+**Schema update:** After pulling the latest changes (DomainAsset support), run the EF migration before starting:
+
+```bash
+cd Server
+DOTNET_ROLL_FORWARD=Major dotnet ef database update
+```
+
+Then build and run:
+
 ```bash
 docker build -t jvision-local .
 docker run -d -p 7777:7777 --name jvision jvision-local

@@ -2,3 +2,10 @@ Client/bin/
 Client/obj/
 Server/bin/
 Server/obj/
+
+firstscan.txt
+hosts_detailed.txt
+hosts_simple.txt
+secondscan.txt
+temp1.xml
+temp2.xml

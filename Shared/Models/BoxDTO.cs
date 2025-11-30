@@ -27,5 +27,7 @@ namespace jVision.Shared.Models
 
         public ICollection<ServiceDTO> Services { get; set; }
 
+        public ICollection<DomainAssetDTO> DomainAssets { get; set; }
+
     }
 }
