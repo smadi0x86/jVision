@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from .core import UploaderConfig, Uploader
-from .plugins import nmap
+from .plugins import nmap, fscan
 
 
 def main():
@@ -17,11 +17,14 @@ def main():
     parser.add_argument("--timing", default="3", help="Nmap timing template (default T3)")
     parser.add_argument("--top-ports", type=int, default=200, help="Limit to top ports for gentler scans")
     parser.add_argument("--verify-ssl", action="store_true")
-    parser.add_argument("--plugin", choices=["nmap"], default="nmap", help="Scanner plugin to use")
+    parser.add_argument("--plugin", choices=["nmap", "fscan"], default="nmap", help="Scanner plugin to use")
     args = parser.parse_args()
 
-    # !!! Add your plugins here
-    plugin = nmap
+    # Select plugin based on argument
+    if args.plugin == "fscan":
+        plugin = fscan
+    else:
+        plugin = nmap
 
     cfg = UploaderConfig(
         server_url=f"http://{args.server}:{args.port}",
@@ -34,9 +37,14 @@ def main():
     )
     uploader = Uploader(cfg)
     if args.xml:
-        boxes = plugin.parse_nmap_xml(args.xml, subnet=args.subnet or args.target)
+        # Use nmap parser for XML files
+        boxes = nmap.parse_nmap_xml(args.xml, subnet=args.subnet or args.target)
     else:
-        boxes = plugin.collect(args.target, args.subnet, args.timing, args.top_ports)
+        # Call the appropriate plugin's collect function
+        if args.plugin == "fscan":
+            boxes = plugin.collect(args.target, subnet=args.subnet)
+        else:  # nmap
+            boxes = plugin.collect(args.target, args.subnet, args.timing, args.top_ports)
     uploader.send_boxes(boxes)
 
 

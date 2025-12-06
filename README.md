@@ -35,6 +35,23 @@ pip install --user requests beautifulsoup4 lxml pwntools
 python3 jvisionclient.py -i <server-ip> -p 7777 -s <target-subnet>
 ```
 
+### Plugin Options
+
+**Nmap (default):**
+```bash
+python3 jvisionclient.py <target> --server <server-ip> --port 7777 --plugin nmap
+```
+
+**fscan (fast Chinese scanner):**
+```bash
+python3 jvisionclient.py <target> --server <server-ip> --port 7777 --plugin fscan
+```
+
+**Multi-stage (fscan → nmap):**
+```bash
+python3 multiscan.py <target> --server <server-ip> --port 7777
+```
+
 > Need more control? POST your own JSON to `http://<server>:7777/box` matching the `BoxDTO` shape (IP, hostname, standing, services[], domainAssets[]).
 
 ## User Guide

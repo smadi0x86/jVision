@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("jVision.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b73c0289070f680eb25865a7cab81274f91edb22")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8675aba9a28cc0e30529cb6a1e175b3cbbf8c79d")]
 [assembly: System.Reflection.AssemblyProductAttribute("jVision.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("jVision.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
