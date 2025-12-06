@@ -62,17 +62,32 @@ def _run_fscan(target: str) -> Path:
 
 def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[BoxPayload]:
     """Parse fscan JSON output and yield BoxPayload objects."""
+    if not json_path.exists():
+        print(f"[warning] fscan output file not found: {json_path}")
+        return
+    
     try:
-        content = Path(json_path).read_text(encoding='utf-8')
+        content = Path(json_path).read_text(encoding='utf-8').strip()
+        
+        if not content:
+            print("[warning] fscan output is empty - no hosts found")
+            return
+        
         # fscan outputs comma-separated JSON objects, not a valid JSON array
         # Wrap it in brackets to make it a valid JSON array
-        if content.strip().endswith(','):
-            content = content.strip()[:-1]  # Remove trailing comma
+        if content.endswith(','):
+            content = content[:-1]  # Remove trailing comma
         json_content = '[' + content + ']'
         data = json.loads(json_content)
+        
+        if not data:
+            print("[warning] No results in fscan JSON output")
+            return
+            
     except Exception as e:
         print(f"[warning] Failed to parse fscan JSON: {e}")
-        return
+        print(f"[info] Attempting to parse as text format...")
+        return parse_fscan_txt(json_path, subnet)
     
     # Group results by IP address
     hosts = {}
@@ -124,16 +139,20 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
                 # Extract title or redirect info
                 title_match = re.search(r'title:(.+?)(?:\s+跳转url:|$)', text)
                 if title_match:
-                    hosts[ip]["comments"].append(f"WebTitle: {title_match.group(1).strip()}")
+                    title = title_match.group(1).strip()
+                    if title and title != "None":
+                        hosts[ip]["comments"].append(f"WebTitle: {title}")
                 
                 # Extract redirect URL
                 redirect_match = re.search(r'跳转url:\s*(\S+)', text)
                 if redirect_match:
                     redirect_url = redirect_match.group(1)
                     # Extract hostname from redirect
-                    hostname_match = re.search(r'https?://([^/]+)', redirect_url)
+                    hostname_match = re.search(r'https?://([^/:]+)', redirect_url)
                     if hostname_match:
-                        hosts[ip]["hostname"] = hostname_match.group(1)
+                        hostname = hostname_match.group(1)
+                        if not hosts[ip]["hostname"]:
+                            hosts[ip]["hostname"] = hostname
                     hosts[ip]["comments"].append(f"Redirect: {redirect_url}")
         
         # Parse NetInfo (domain/hostname info)
@@ -158,16 +177,23 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
                             "comments": []
                         }
                 
-                # Check if it's a hostname (not an IP)
+                # Match info lines - handle both [->] and variations
                 elif current_ip and line.startswith('[->]'):
                     info = line[4:].strip()
+                    
+                    if not info:
+                        continue
+                    
+                    # Check if it's a hostname (not an IP or IPv6)
                     if not re.match(r'\d+\.\d+\.\d+\.\d+', info) and not info.startswith('dead:beef'):
                         if not hosts[current_ip]["hostname"]:
                             hosts[current_ip]["hostname"] = info
+                            print(f"[info] Found hostname {info} for {current_ip}")
                         
                         # Check if it looks like a domain controller
                         # Match DC01, DC-01, JD-DC01, CORP-DC01, etc.
                         if re.search(r'DC[-_]?\d+', info, re.IGNORECASE):
+                            print(f"[info] Detected domain controller: {info} at {current_ip}")
                             domain_asset = DomainAssetPayload(
                                 hostname=info,
                                 ip=current_ip,
@@ -175,8 +201,31 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
                             )
                             hosts[current_ip]["domain_assets"].append(domain_asset)
     
+    if not hosts:
+        print("[warning] No hosts extracted from fscan output")
+        return
+    
+    print(f"[info] Parsed {len(hosts)} host(s) from fscan output")
+    
     # Yield BoxPayload for each host
     for ip, host_data in hosts.items():
+        # Fallback: If hostname looks like a DC but no domain asset was created, create one now
+        hostname = host_data["hostname"]
+        if hostname and not host_data["domain_assets"]:
+            # Check if hostname indicates it's a domain controller
+            if re.search(r'DC[-_]?\d+', hostname, re.IGNORECASE):
+                print(f"[info] Detected DC from hostname fallback: {hostname} at {ip}")
+                domain_asset = DomainAssetPayload(
+                    hostname=hostname,
+                    ip=ip,
+                    isDomainController=True,
+                )
+                host_data["domain_assets"].append(domain_asset)
+        
+        services_count = len(host_data["services"])
+        domain_count = len(host_data["domain_assets"])
+        print(f"[info]   {ip} ({host_data.get('hostname') or 'no hostname'}) - {services_count} service(s), {domain_count} domain asset(s)")
+        
         yield BoxPayload(
             ip=host_data["ip"],
             hostname=host_data["hostname"],
