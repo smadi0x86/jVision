@@ -157,16 +157,17 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
                             "os": None,
                             "comments": []
                         }
-                # Match info lines
+                
+                # Check if it's a hostname (not an IP)
                 elif current_ip and line.startswith('[->]'):
                     info = line[4:].strip()
-                    # Check if it's a hostname (not an IP)
                     if not re.match(r'\d+\.\d+\.\d+\.\d+', info) and not info.startswith('dead:beef'):
                         if not hosts[current_ip]["hostname"]:
                             hosts[current_ip]["hostname"] = info
                         
                         # Check if it looks like a domain controller
-                        if re.match(r'DC\d+', info, re.IGNORECASE):
+                        # Match DC01, DC-01, JD-DC01, CORP-DC01, etc.
+                        if re.search(r'DC[-_]?\d+', info, re.IGNORECASE):
                             domain_asset = DomainAssetPayload(
                                 hostname=info,
                                 ip=current_ip,
