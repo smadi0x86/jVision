@@ -193,13 +193,16 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
                         # Check if it looks like a domain controller
                         # Match DC01, DC-01, JD-DC01, CORP-DC01, etc.
                         if re.search(r'DC[-_]?\d+', info, re.IGNORECASE):
-                            print(f"[info] Detected domain controller: {info} at {current_ip}")
-                            domain_asset = DomainAssetPayload(
-                                hostname=info,
-                                ip=current_ip,
-                                isDomainController=True,
-                            )
-                            hosts[current_ip]["domain_assets"].append(domain_asset)
+                            # Check if we already added this domain asset (avoid duplicates)
+                            already_exists = any(da.hostname == info for da in hosts[current_ip]["domain_assets"])
+                            if not already_exists:
+                                print(f"[info] Detected domain controller: {info} at {current_ip}")
+                                domain_asset = DomainAssetPayload(
+                                    hostname=info,
+                                    ip=current_ip,
+                                    isDomainController=True,
+                                )
+                                hosts[current_ip]["domain_assets"].append(domain_asset)
     
     if not hosts:
         print("[warning] No hosts extracted from fscan output")
@@ -221,6 +224,14 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
                     isDomainController=True,
                 )
                 host_data["domain_assets"].append(domain_asset)
+        
+        # Add domain asset info to comments for visibility
+        if host_data["domain_assets"]:
+            for da in host_data["domain_assets"]:
+                dc_status = "Domain Controller" if da.isDomainController else "Domain Member"
+                host_data["comments"].append(f"🏢 {dc_status}: {da.hostname}")
+                if da.domainName:
+                    host_data["comments"].append(f"   Domain: {da.domainName}")
         
         services_count = len(host_data["services"])
         domain_count = len(host_data["domain_assets"])
