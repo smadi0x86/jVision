@@ -63,7 +63,13 @@ def _run_fscan(target: str) -> Path:
 def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[BoxPayload]:
     """Parse fscan JSON output and yield BoxPayload objects."""
     try:
-        data = json.loads(Path(json_path).read_text(encoding='utf-8'))
+        content = Path(json_path).read_text(encoding='utf-8')
+        # fscan outputs comma-separated JSON objects, not a valid JSON array
+        # Wrap it in brackets to make it a valid JSON array
+        if content.strip().endswith(','):
+            content = content.strip()[:-1]  # Remove trailing comma
+        json_content = '[' + content + ']'
+        data = json.loads(json_content)
     except Exception as e:
         print(f"[warning] Failed to parse fscan JSON: {e}")
         return
@@ -72,50 +78,101 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
     hosts = {}
     
     for result in data:
-        ip = result.get("ip") or result.get("host")
-        if not ip:
-            continue
+        result_type = result.get("type")
+        text = result.get("text", "")
         
-        if ip not in hosts:
-            hosts[ip] = {
-                "ip": ip,
-                "hostname": result.get("hostname"),
-                "services": [],
-                "domain_assets": [],
-                "os": result.get("os"),
-                "comments": []
-            }
+        # Parse port scan results
+        if result_type == "msg":
+            # Format: "10.129.244.72:22 open"
+            match = re.match(r'(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\w+)', text)
+            if match:
+                ip, port, state = match.groups()
+                if ip not in hosts:
+                    hosts[ip] = {
+                        "ip": ip,
+                        "hostname": None,
+                        "services": [],
+                        "domain_assets": [],
+                        "os": None,
+                        "comments": []
+                    }
+                
+                hosts[ip]["services"].append(
+                    ServicePayload(
+                        port=int(port),
+                        protocol="tcp",
+                        state=state,
+                    )
+                )
         
-        # Extract service information
-        port = result.get("port")
-        if port:
-            service = ServicePayload(
-                port=int(port),
-                protocol=result.get("protocol", "tcp"),
-                state="open",
-                name=result.get("service"),
-                version=result.get("version"),
-                script=result.get("banner") or result.get("info")
-            )
-            hosts[ip]["services"].append(service)
+        # Parse web titles
+        elif result_type == "WebTitle":
+            # Format: "http://10.129.244.72      code:302 len:154    title:302 Found 跳转url: http://fries.htb/"
+            match = re.search(r'https?://(\d+\.\d+\.\d+\.\d+)', text)
+            if match:
+                ip = match.group(1)
+                if ip not in hosts:
+                    hosts[ip] = {
+                        "ip": ip,
+                        "hostname": None,
+                        "services": [],
+                        "domain_assets": [],
+                        "os": None,
+                        "comments": []
+                    }
+                
+                # Extract title or redirect info
+                title_match = re.search(r'title:(.+?)(?:\s+跳转url:|$)', text)
+                if title_match:
+                    hosts[ip]["comments"].append(f"WebTitle: {title_match.group(1).strip()}")
+                
+                # Extract redirect URL
+                redirect_match = re.search(r'跳转url:\s*(\S+)', text)
+                if redirect_match:
+                    redirect_url = redirect_match.group(1)
+                    # Extract hostname from redirect
+                    hostname_match = re.search(r'https?://([^/]+)', redirect_url)
+                    if hostname_match:
+                        hosts[ip]["hostname"] = hostname_match.group(1)
+                    hosts[ip]["comments"].append(f"Redirect: {redirect_url}")
         
-        # Extract domain information (if present)
-        if result.get("is_domain_controller") or result.get("domain"):
-            domain_asset = DomainAssetPayload(
-                hostname=result.get("hostname", ip),
-                domainName=result.get("domain"),
-                distinguishedName=result.get("dn"),
-                role=result.get("role"),
-                ip=ip,
-                isDomainController=result.get("is_domain_controller", False),
-                notes=result.get("notes")
-            )
-            hosts[ip]["domain_assets"].append(domain_asset)
-        
-        # Collect vulnerability or additional info
-        vuln = result.get("vulnerability") or result.get("poc")
-        if vuln:
-            hosts[ip]["comments"].append(vuln)
+        # Parse NetInfo (domain/hostname info)
+        elif result_type == "NetInfo":
+            # Format: "\n[*]10.129.244.72\n   [->]DC01\n   [->]192.168.100.1..."
+            lines = text.strip().split('\n')
+            current_ip = None
+            
+            for line in lines:
+                line = line.strip()
+                # Match IP line
+                ip_match = re.match(r'\[\*\](\d+\.\d+\.\d+\.\d+)', line)
+                if ip_match:
+                    current_ip = ip_match.group(1)
+                    if current_ip not in hosts:
+                        hosts[current_ip] = {
+                            "ip": current_ip,
+                            "hostname": None,
+                            "services": [],
+                            "domain_assets": [],
+                            "os": None,
+                            "comments": []
+                        }
+                # Match info lines
+                elif current_ip and line.startswith('[->]'):
+                    info = line[4:].strip()
+                    # Check if it's a hostname (not an IP)
+                    if not re.match(r'\d+\.\d+\.\d+\.\d+', info) and not info.startswith('dead:beef'):
+                        if not hosts[current_ip]["hostname"]:
+                            hosts[current_ip]["hostname"] = info
+                        
+                        # Check if it looks like a domain controller
+                        if re.match(r'DC\d+', info, re.IGNORECASE):
+                            domain_asset = DomainAssetPayload(
+                                hostname=info,
+                                ip=current_ip,
+                                isDomainController=True,
+                            )
+                            hosts[current_ip]["domain_assets"].append(domain_asset)
     
     # Yield BoxPayload for each host
     for ip, host_data in hosts.items():
@@ -146,8 +203,8 @@ def parse_fscan_txt(txt_path: Path, subnet: str | None = None) -> Iterable[BoxPa
         if not line:
             continue
         
-        # Match patterns like: [+] 192.168.1.1:80 open
-        match = re.match(r'\[.*?\]\s+(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\w+)', line)
+        # Match patterns like: 10.129.244.72:80 open
+        match = re.match(r'(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\w+)', line)
         if match:
             ip, port, state = match.groups()
             if ip not in hosts:
