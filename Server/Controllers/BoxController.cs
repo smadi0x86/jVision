@@ -61,7 +61,7 @@ namespace jVision.Server.Controllers
             List<BoxDTO> upgraded = new List<BoxDTO>();
             foreach (var box in bto.ToList())
             {
-                Box exists = _context.Boxes.Include(x=>x.Services).FirstOrDefault(bruh => bruh.Ip == box.Ip);
+                Box exists = _context.Boxes.Include(x=>x.Services).Include(x=>x.DomainAssets).FirstOrDefault(bruh => bruh.Ip == box.Ip);
                 if(exists != null)
                 {
                     if(box.Hostname != null)
@@ -72,6 +72,8 @@ namespace jVision.Server.Controllers
                     exists.Subnet = box.Subnet;
                     exists.Services.Clear();
                     exists.Services = box.Services?.Select(x => DTOToService(x)).ToList();
+                    exists.DomainAssets.Clear();
+                    exists.DomainAssets = box.DomainAssets?.Select(x => DTOToDomainAsset(x)).ToList();
                     _context.Boxes.Update(exists);
                     upgraded.Add(box);
                     bto.Remove(box);
@@ -95,7 +97,8 @@ namespace jVision.Server.Controllers
                     Standing = b.Standing,
                     Os = b.Os,
                     Subnet = b.Subnet,
-                    Services = b.Services?.Select(x => DTOToService(x)).ToList()
+                    Services = b.Services?.Select(x => DTOToService(x)).ToList(),
+                    DomainAssets = b.DomainAssets?.Select(x => DTOToDomainAsset(x)).ToList()
                 }));
                 await _context.SaveChangesAsync();
                 await _hubContext.Clients.All.BoxAdded();
@@ -205,6 +208,18 @@ namespace jVision.Server.Controllers
             {
                 DomainAssetId = d.DomainAssetId,
                 BoxId = d.BoxId,
+                Hostname = d.Hostname,
+                DomainName = d.DomainName,
+                DistinguishedName = d.DistinguishedName,
+                Role = d.Role,
+                Ip = d.Ip,
+                IsDomainController = d.IsDomainController,
+                Notes = d.Notes
+            };
+
+        private static DomainAsset DTOToDomainAsset(DomainAssetDTO d) =>
+            new DomainAsset
+            {
                 Hostname = d.Hostname,
                 DomainName = d.DomainName,
                 DistinguishedName = d.DistinguishedName,
