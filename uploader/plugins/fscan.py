@@ -229,9 +229,9 @@ def parse_fscan_json(json_path: Path, subnet: str | None = None) -> Iterable[Box
         if host_data["domain_assets"]:
             for da in host_data["domain_assets"]:
                 dc_status = "Domain Controller" if da.isDomainController else "Domain Member"
-                host_data["comments"].append(f"🏢 {dc_status}: {da.hostname}")
+                host_data["comments"].append(f"{dc_status}: {da.hostname}")
                 if da.domainName:
-                    host_data["comments"].append(f"   Domain: {da.domainName}")
+                    host_data["comments"].append(f"Domain: {da.domainName}")
         
         services_count = len(host_data["services"])
         domain_count = len(host_data["domain_assets"])
